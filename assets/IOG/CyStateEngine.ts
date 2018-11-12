@@ -1,6 +1,3 @@
-import InputManager from "../scripts/InputManager";
-import CyPlayer from "./CyPlayer";
-
 import { DataChange } from "./colyseus/colyseus";
 import CyEntity from "./CyEntity";
 

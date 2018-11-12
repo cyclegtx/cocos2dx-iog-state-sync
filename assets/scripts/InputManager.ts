@@ -42,7 +42,8 @@ export default class InputManager extends cc.Component {
     mouseLeftButtonDown:boolean = false;
     mouseRightButtonDown:boolean = false;
 
-    mousePositionInCanvas:cc.Vec2 = cc.Vec2.ZERO;
+    mousePositionInCanvas: cc.Vec2 = cc.Vec2.ZERO;
+    lastMousePositionInCanvas:cc.Vec2 = cc.Vec2.ZERO;
     eventPosition:cc.Vec2 = cc.Vec2.ZERO;
     static instance: InputManager;
     
@@ -61,8 +62,15 @@ export default class InputManager extends cc.Component {
 
     sendMousemoveCMDToRoom(){
         if (this.engine.room) {
-            //将cocos2dx坐标转换为系标准屏幕坐标系
-            this.engine.sendCMDToRoom("mousemove", { x: this.mousePositionInCanvas.x, y: -this.mousePositionInCanvas.y });
+            if(
+                Math.abs(this.lastMousePositionInCanvas.x - this.mousePositionInCanvas.x) > 0.1 ||
+                Math.abs(this.lastMousePositionInCanvas.y - this.mousePositionInCanvas.y) > 0.1
+            ){
+                //将cocos2dx坐标转换为系标准屏幕坐标系
+                this.engine.sendCMDToRoom("mousemove", { x: this.mousePositionInCanvas.x, y: -this.mousePositionInCanvas.y });
+                this.lastMousePositionInCanvas.x = this.mousePositionInCanvas.x;
+                this.lastMousePositionInCanvas.y = this.mousePositionInCanvas.y;
+            }
         }
     }
 
