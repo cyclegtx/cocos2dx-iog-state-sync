@@ -207,7 +207,8 @@
     "_enabled": true,
     "ip": "localhost",
     "port": "2567",
-    "roomName": "room",
+    "roomName": "ExampleRoom",
+    "debug": true,
     "roundPrefab": null,
     "roundContainer": {
       "__id__": 6
@@ -469,7 +470,7 @@
         "__id__": 15
       }
     ],
-    "_active": true,
+    "_active": false,
     "_level": 2,
     "_components": [
       {

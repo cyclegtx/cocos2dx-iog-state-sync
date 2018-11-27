@@ -1,5 +1,7 @@
 import { DataChange } from "./colyseus/colyseus";
 import CyEntity from "./CyEntity";
+import CyUIManager from "./CyUIManager";
+import CyPlayer from "./CyPlayer";
 
 // Learn TypeScript:
 //  - [Chinese] http://docs.cocos.com/creator/manual/zh/scripting/typescript.html
@@ -31,6 +33,11 @@ export default class CyStateEngine extends cc.Component {
     })
     roomName = "room";
 
+    @property({
+        displayName:"是否开启调试"
+    })
+    debug:boolean = true;
+
     /**
      *Entity列表
      *
@@ -38,6 +45,14 @@ export default class CyStateEngine extends cc.Component {
      * @memberof CyStateEngine
      */
     entities: Map<string, CyEntity> = new Map();
+
+    /**
+     *Player列表
+     *
+     * @type {CyPlayer[]}
+     * @memberof CyStateEngine
+     */
+    players: Map<string, CyPlayer> = new Map();
 
     /**
      *服务器帧插值
@@ -54,14 +69,6 @@ export default class CyStateEngine extends cc.Component {
      * @memberof CyEngine
      */
     serverFrameRate: number = 20;
-
-    /**
-     *玩家列表,存储玩家输入
-     *
-     * @type {Array<CyPlayer>}
-     * @memberof CyEngine
-     */
-    public players: Array<CyPlayer> = null;
 
     client:Colyseus.Client = null;
     room:Colyseus.Room = null;
@@ -96,7 +103,7 @@ export default class CyStateEngine extends cc.Component {
         if (CyStateEngine.instance == undefined) {
             CyStateEngine.instance = this;
         } else {
-            console.log("CyEngine 单例失败");
+            console.log("CyStateEngine 单例失败");
             return;
         }
         this.client = new Colyseus.Client(`ws://${this.ip}:${this.port}`);
@@ -150,7 +157,7 @@ export default class CyStateEngine extends cc.Component {
     joinRoom(){
         this.room = this.client.join(this.roomName);
         this.room.onJoin.add(this.onJoinRoom.bind(this));
-
+        this.room.listen("setting", (st)=>{console.log(st)});
         this.room.listen("entities/:id", this.onEntityChange.bind(this));
         this.room.listen("entities/:id/:attribute", this.onEntityAttributeChange.bind(this));
 
@@ -164,13 +171,18 @@ export default class CyStateEngine extends cc.Component {
      * @memberof CyStateEngine
      */
     async onEntityChange(change: DataChange){
-        // console.log(change)
 
         if (change.operation === "add") {
 
             if(change.value.y){
                 //将标准屏幕坐标系转换为cocos2dx坐标系
                 change.value.y = -change.value.y;
+            }
+
+            if(change.value.type == "Player"){
+                if (change.value.sessionId == this.room.sessionId){
+                    CyUIManager.instance.gameStart();
+                }
             }
 
             //根据type在resources/prefabs下找同名的prefab
@@ -181,7 +193,12 @@ export default class CyStateEngine extends cc.Component {
             }
             let entityNode: cc.Node = cc.instantiate(entityPrefab) as cc.Node;
             let entity: CyEntity = entityNode.getComponent(CyEntity);
+            entity.id = change.path.id;
             this.entities.set(change.path.id, entity);
+
+            if(change.value.type == "Player"){
+                this.players.set(change.path.id,entity as CyPlayer);
+            }
 
             this.roundContainer.addChild(entityNode);
 
@@ -191,8 +208,6 @@ export default class CyStateEngine extends cc.Component {
         } else if (change.operation === "remove") {
             let entity: CyEntity = this.entities.get(change.path.id);
             entity.onRemove();
-            this.roundContainer.removeChild(entity.node);
-            this.entities.delete(change.path.id);
         }
     }
 
@@ -203,7 +218,6 @@ export default class CyStateEngine extends cc.Component {
      * @memberof CyStateEngine
      */
     async onEntityAttributeChange(change: DataChange){
-
         let entity: CyEntity = this.entities.get(change.path.id);
         if (entity) {
             if (change.operation == "replace") {
@@ -267,6 +281,9 @@ export default class CyStateEngine extends cc.Component {
      */
     onMessage(message){
         switch(message[0]){
+            case "msg":
+                CyUIManager.instance.showToast(message[1]);
+                break;
             default:
                 console.warn("未处理的消息:");
                 console.warn(message);
